@@ -1,0 +1,81 @@
+body,
+ul,
+li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+a{
+  padding: 10px;
+  font-size: 1.5rem;
+  text-decoration: none;
+  color: gray;
+  display: inline-block;
+}
+div {
+  font-size: 1.5rem;
+}
+body>div {
+  display: block;
+  width: 1000px;
+  margin: 0 auto;
+}
+div > div {
+  margin: 20px;
+}
+a:hover {
+  color: black;
+}
+.top-bar > .userName {
+  font-size: 3rem;
+  font-weight: lighter;
+}
+.con {
+  width: 1000px;
+  margin: 0 auto;
+}
+.top-bar > .menu-box-1 > ul {
+  display: flex;
+}
+.top-bar > .menu-box-1 > ul > li {
+  flex-grow: 1;
+  text-align: center;
+}
+.top-bar > .menu-box-1 > ul > li > a {
+  display: block;
+  border-bottom: 3px solid black;
+}
+.top-bar > .menu-box-1 > ul > li:hover > a {
+  transition: 0.3s;
+  border-bottom: 3px solid red;
+}
+.menu-box-1 > ul > li {
+  width: 25%;
+}
+ul ul {
+  display: none;
+}
+li:hover {
+  position: relative;
+}
+li:hover > ul {
+  position: absolute;
+  width: 100%;
+  display: block;
+  background-color: #dfdfdf;
+}
+.stats {
+  padding: 50px;
+  font-size: 1rem;
+}
+.stats > ul {
+  text-align: center;
+}
+.stats > ul > li {
+  margin: 20px;
+}
+.table{
+  display: block;
+  margin: 0 auto;
+  width: 1000px;
+}
