@@ -612,11 +612,16 @@ class BuildService {
 		}
 
 		// 홈 파일 생성
+		// 로그인 이후 화면 구현 필요
+		// 로그인 이전 화면 > action 이용?
 		{
 			String html = "";
 			html += "<div class=\"home\">";
-			html += "<div>ID : " + "</div>";
-			html += "<div>PW : " + "</div>";
+			html += "<form action=\"\">";
+			html += "<div><input type=\"text\" placeholder=\"ID\" name=\"id\"/></div>";
+			html += "<div><input type=\"text\" placeholder=\"PW\" name=\"pw\"/></div>";
+			html += "<div><input type=\"submit\" value=\"로그인\" /></div>";
+			html += "</form>";
 			html = head + html + foot;
 			Util.writeFileContents("site/home/index.html", html);
 		}
