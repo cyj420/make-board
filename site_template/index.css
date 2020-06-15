@@ -49,6 +49,9 @@ a:hover {
   transition: 0.3s;
   border-bottom: 3px solid red;
 }
+.top-bar img{
+  width: 200px;
+}
 .menu-box-1 > ul > li {
   width: 25%;
 }
@@ -64,6 +67,12 @@ li:hover > ul {
   display: block;
   background-color: #dfdfdf;
 }
+td>a{
+  color:black;
+}
+.td_for_title>a:hover{
+  color:red;
+}
 .stats {
   padding: 50px;
   font-size: 1rem;
@@ -76,7 +85,7 @@ li:hover > ul {
 }
 .table{
   display: block;
-  margin: 0 auto;
+  margin: 20px auto;
   width: 1000px;
 }
 form {

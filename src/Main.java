@@ -16,6 +16,7 @@ import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.org.apache.xpath.internal.functions.Function;
 
 class Main {
 	public static void main(String[] args) {
@@ -532,13 +533,37 @@ class BuildController extends Controller {
 	void doAction(Request reqeust) {
 		if (reqeust.getActionName().equals("site")) {
 			actionSite(reqeust);
-		}
+		} /*
+			 * else if (reqeust.getActionName().equals("startAutoSite")) {
+			 * actionAutoSite(reqeust); }
+			 */
 	}
+
+//	private void actionAutoSite(Request reqeust) {
+//		Thread1 t1 = new Thread1();
+//		t1.run();
+//	}
 
 	private void actionSite(Request reqeust) {
 		buildService.buildSite();
+		System.out.println("사이트 생성");
 	}
 }
+
+//class Thread1 extends Thread {
+//	public void run() {
+//		System.out.println("thread1 run");
+//		System.out.println("thread1 while1");
+//		Factory.getBuildService().buildSite();
+//		try {
+//			System.out.println("try진행중");
+//			Thread.sleep(10000);
+//		} catch (InterruptedException ie) {
+//			System.out.println("캐치-어떤 에러??");
+//		}
+//		System.out.println("thread1 while2");
+//	}
+//}
 
 // Service
 class BuildService {
@@ -574,8 +599,8 @@ class BuildService {
 				html += "<tr>";
 				html += "<td>" + article.getId() + "</td>";
 				html += "<td>" + article.getRegDate() + "</td>";
+				html += "<td class=\"td_for_title\"><a href=\"" + article.getId() + ".html\">" + article.getTitle() + "</a></td>";
 				html += "<td>" + memberService.getMember(article.getMemberId()).getName() + "</td>";
-				html += "<td><a href=\"" + article.getId() + ".html\">" + article.getTitle() + "</a></td>";
 				html += "</tr>";
 			}
 
@@ -592,11 +617,14 @@ class BuildService {
 		for (Article article : articles) {
 			String html = "";
 
+			// 게시판 별로 폴더를 따로 구성해야??
+			// site/article/1.html 형식이었던 기존 파일들을 site/article/1-1.html 이런 식으로 boardId를 추가해주는 것은?
 			html += "<div class=\"detail\">";
 			html += "<div>제목 : " + article.getTitle() + "</div>";
-			html += "<div>내용 : " + article.getBody() + "</div>";
-			html += "<div>작성자 : " + memberService.getMember(article.getMemberId()) + "</div>";
+			html += "<div>작성자 : " + memberService.getMember(article.getMemberId()).getName() + "</div>";
 			html += "<div>마지막으로 수정된 날짜 : " + article.getRegDate() + "</div>";
+			html += "<div>내용 : " + article.getBody() + "</div>";
+			html += "<br>";
 			// 조회수... 추가 필요.
 			if (!articles.get(0).equals(article)) {
 				html += "<div><a href=\"" + (article.getId() - 1) + ".html\">이전글</a></div>";
@@ -630,7 +658,7 @@ class BuildService {
 		{
 			String html = "";
 			html += "<div class=\"home\">";
-			html += "<div>총 게시물 수 : " + articles.size() + "</div>";
+			html += "<div>총 게시물 수 : " + articles.size() + " 개</div>";
 			html += "<div>각 게시판별 게시물 수 : ";
 			for (int i = 0; i < articleService.getBoards().size(); i++) {
 				int totalArticleNum = 0;
@@ -639,10 +667,10 @@ class BuildService {
 						totalArticleNum++;
 					}
 				}
-				html += "<div>-" + articleService.getBoards().get(i).getName() + " : " + totalArticleNum + "</div>";
+				html += "<div>-" + articleService.getBoards().get(i).getName() + " : " + totalArticleNum + " 개</div>";
 			}
 			html += "</div>";
-			html += "<div>회원수 : " + memberService.getMembers().size() + "</div>";
+			html += "<div>회원수 : " + memberService.getMembers().size() + " 명</div>";
 //				총 게시물 조회 수 :
 //				각 게시판별 조회 게시물 수 :
 			html = head + html + foot;
