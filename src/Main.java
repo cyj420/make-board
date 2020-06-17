@@ -91,8 +91,10 @@ class DBConnection {
 
 	public void connect() {
 		String url = "jdbc:mysql://localhost:3306/site5?serverTimezone=UTC";
-		String user = "sbsst";
-		String password = "sbs123414";
+//		String user = "sbsst";
+//		String password = "sbs123414";
+		String user = "root";
+		String password = "";
 		String driverName = "com.mysql.cj.jdbc.Driver";
 
 		try {
@@ -355,23 +357,35 @@ class DBConnection {
 		return id;
 	}
 
-	public List<Board> getBoards() {
-//		List<Board> boards;
-		String sql = "SELECT * FROM board";
-		List<Map<String, Object>> boards = selectRows(sql);
-		for(Board b : getBoards()) {
-			if
+	public Board getBoardById(int id) {
+		List<Board> boards = Factory.getArticleService().getBoards();
+		for (Board b : boards) {
+			if (b.getId() == id) {
+				return b;
+			}
 		}
-		return ;
-		
-//		System.out.println(selectRow(str));
-//		Map<String, Object> article = selectRow(str);
-//		System.out.println("제목 : " + article.get("title"));
-//		// 아직 member 구현 안했기에 이부분 pass
-////		int a = (int) article.get("memberId");
-////		System.out.println("작성자 : " + Factory.getMemberService().getMember(a));
-//		System.out.println("날짜 : " + article.get("regDate"));
-//		System.out.println("내용 : " + article.get("body"));
+		return null;
+	}
+
+	public List<Article> getArticlesByBoardCode(String code) {
+		List<Board> boards = Factory.getArticleService().getBoards();
+		List<Article> articles = new ArrayList<>();
+		Board board = new Board();
+		for (Board b : boards) {
+			if (b.getCode().equals(code)) {
+				board = b;
+				break;
+			}
+		}
+		if (board != null) {
+			List<Article> tempArticles = Factory.getArticleService().getArticles();
+			for (Article a : tempArticles) {
+				if (a.getBoardId() == board.getId()) {
+					articles.add(a);
+				}
+			}
+		}
+		return articles;
 	}
 }
 
@@ -393,7 +407,6 @@ class Factory {
 		if (dbConnection == null) {
 			dbConnection = new DBConnection();
 		}
-
 		return dbConnection;
 	}
 
@@ -401,7 +414,6 @@ class Factory {
 		if (session == null) {
 			session = new Session();
 		}
-
 		return session;
 	}
 
@@ -409,7 +421,6 @@ class Factory {
 		if (scanner == null) {
 			scanner = new Scanner(System.in);
 		}
-
 		return scanner;
 	}
 
@@ -417,7 +428,6 @@ class Factory {
 		if (db == null) {
 			db = new DB();
 		}
-
 		return db;
 	}
 
@@ -425,7 +435,6 @@ class Factory {
 		if (articleService == null) {
 			articleService = new ArticleService();
 		}
-
 		return articleService;
 	}
 
@@ -433,7 +442,6 @@ class Factory {
 		if (articleDao == null) {
 			articleDao = new ArticleDao();
 		}
-
 		return articleDao;
 	}
 
@@ -448,7 +456,6 @@ class Factory {
 		if (memberDao == null) {
 			memberDao = new MemberDao();
 		}
-
 		return memberDao;
 	}
 
@@ -456,7 +463,6 @@ class Factory {
 		if (buildService == null) {
 			buildService = new BuildService();
 		}
-
 		return buildService;
 	}
 }
@@ -635,7 +641,9 @@ class ArticleController extends Controller {
 		String name = Factory.getScanner().nextLine().trim();
 		System.out.print("게시판 코드 : ");
 		String code = Factory.getScanner().nextLine().trim();
-		articleService.makeBoard(name, code);
+		if (articleService.makeBoard(name, code) < 0) {
+			System.out.println("게시판 생성 실패 사유 : ");
+		}
 	}
 
 	private void actionDelete(Request reqeust) {
@@ -715,7 +723,13 @@ class BuildController extends Controller {
 	void doAction(Request reqeust) {
 		if (reqeust.getActionName().equals("site")) {
 			actionSite(reqeust);
+		} else if (reqeust.getActionName().equals("startAutoSite")) {
+			actionStartAutoSite(reqeust);
 		}
+	}
+
+	private void actionStartAutoSite(Request reqeust) {
+		buildService.startAutoSite();
 	}
 
 	private void actionSite(Request reqeust) {
@@ -787,13 +801,29 @@ class MemberController extends Controller {
 }
 
 // Service
-class BuildService {
+class BuildService{
 	ArticleService articleService;
 
 	BuildService() {
 		articleService = Factory.getArticleService();
 	}
 
+	public void startAutoSite() {
+	}
+
+//	@Override
+//	public void run() {
+//		while(true) {
+//			buildSite();
+//			System.out.println("buildSite() 실행!");
+//			try {
+//				Thread.sleep(10000);
+//			}catch (InterruptedException e) {
+//				e.printStackTrace();
+//			}
+//		}
+//	}
+	
 	public void buildSite() {
 		Util.makeDir("site");
 		Util.makeDir("site/article");
@@ -805,14 +835,18 @@ class BuildService {
 		List<Board> boards = articleService.getBoards();
 
 		for (Board board : boards) {
-			String fileName = board.getCode() + "-list-1.html";
+			String fileName = "list-" + board.getCode() + ".html";
 
 			String html = "";
 
 			List<Article> articles = articleService.getArticlesByBoardCode(board.getCode());
 
+			System.out.println("board code : " + board.getCode());
+			System.out.println("articles size : " + articles.size());
+
 			String template = Util.getFileContents("site_template/article/list.html");
 
+			// 여기서 문제... 왜?
 			for (Article article : articles) {
 				html += "<tr>";
 				html += "<td>" + article.getId() + "</td>";
@@ -836,15 +870,21 @@ class BuildService {
 
 			html += "<div>제목 : " + article.getTitle() + "</div>";
 			html += "<div>내용 : " + article.getBody() + "</div>";
-			html += "<div><a href=\"" + (article.getId() - 1) + ".html\">이전글</a></div>";
-			html += "<div><a href=\"" + (article.getId() + 1) + ".html\">다음글</a></div>";
+			
+			//list라서 DB의 id와는 쌓이는 순서가 반대가 되어서 if문의 조건식이 이렇게 되어버렸음.
+			//중간에 삭제할 경우 이어지지 404 페이지가 생기니 html 파일이 존재하지 않을 경우 넘기는 방법 찾아내기.
+			if(article.getId()!=articles.get(articles.size()-1).getId()) {
+				html += "<div><a href=\"" + (article.getId() - 1) + ".html\">이전글</a></div>";
+			}
+			if(article.getId()!=articles.get(0).getId()) {
+				html += "<div><a href=\"" + (article.getId() + 1) + ".html\">다음글</a></div>";
+			}
 
 			html = head + html + foot;
 
 			Util.writeFileContents("site/article/" + article.getId() + ".html", html);
 		}
 	}
-
 }
 
 class ArticleService {
@@ -870,38 +910,36 @@ class ArticleService {
 		articleDao.changeBoard(code);
 	}
 
+	// dbConnection 완료
 	public List<Article> getArticlesByBoardCode(String code) {
 		return articleDao.getArticlesByBoardCode(code);
 	}
 
+	// dbConnection 완료
 	public List<Board> getBoards() {
 		return articleDao.getBoards();
 	}
 
+	// dbConnection 완료
 	public int makeBoard(String name, String code) {
-//		Board oldBoard = articleDao.getBoardByCode(code);
-//
-//		if (oldBoard != null) {
-//			return -1;
-//		}
-//
-//		Board board = new Board(name, code);
 		return articleDao.saveBoard(name, code);
 	}
 
+	// dbConnection 완료
 	public Board getBoard(int id) {
 		return articleDao.getBoard(id);
 	}
 
+	// dbConnection 완료
 	public int write(int boardId, int memberId, String title, String body) {
 		Article article = new Article(boardId, memberId, title, body);
 		return articleDao.save(article);
 	}
 
+	// dbConnection 완료
 	public List<Article> getArticles() {
 		return articleDao.getArticles();
 	}
-
 }
 
 class MemberService {
@@ -991,7 +1029,8 @@ class ArticleDao {
 	}
 
 	public List<Article> getArticlesByBoardCode(String code) {
-		return db.getArticlesByBoardCode(code);
+		return dbConnection.getArticlesByBoardCode(code);
+//		return db.getArticlesByBoardCode(code);
 	}
 
 	public List<Board> getBoards() {
@@ -1001,7 +1040,6 @@ class ArticleDao {
 		for (Map<String, Object> row : rows) {
 			boards.add(new Board(row));
 		}
-
 		return boards;
 	}
 
@@ -1011,7 +1049,7 @@ class ArticleDao {
 
 	public int saveBoard(String name, String code) {
 		String sql = "";
-		if(!isBoardExistByCode(code)) {
+		if (!isBoardExistByCode(code)) {
 			sql = "INSERT INTO board SET regDate=NOW(), `name`='" + name + "', `code`='" + code + "'";
 			return dbConnection.saveBoard(sql);
 		}
@@ -1019,8 +1057,8 @@ class ArticleDao {
 	}
 
 	private boolean isBoardExistByCode(String code) {
-		for(Board b : getBoards()) {
-			if(b.getCode().equals(code)) {
+		for (Board b : getBoards()) {
+			if (b.getCode().equals(code)) {
 				return true;
 			}
 		}
@@ -1040,13 +1078,11 @@ class ArticleDao {
 	}
 
 	public Board getBoard(int id) {
-		return db.getBoard(id);
+		return dbConnection.getBoardById(id);
 	}
 
 	public List<Article> getArticles() {
-		List<Map<String, Object>> rows = dbConnection.selectRows("SELECT * FROM article WHERE boardId="
-				+ Factory.getSession().getCurrentBoard().getId() + " ORDER BY id DESC");
-		// SELECT * FROM article WHERE boardId=1 ORDER BY id DESC ;
+		List<Map<String, Object>> rows = dbConnection.selectRows("SELECT * FROM article ORDER BY id DESC");
 		List<Article> articles = new ArrayList<>();
 
 		for (Map<String, Object> row : rows) {
@@ -1335,7 +1371,7 @@ class Board extends Dto {
 		this.setName((String) row.get("name"));
 		this.setCode((String) row.get("code"));
 	}
-	
+
 	public Board(String name, String code) {
 		this.name = name;
 		this.code = code;
