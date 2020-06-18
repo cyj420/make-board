@@ -23,10 +23,31 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-class Main {
+class Main extends Thread {
+	public static boolean workStarted = false;
+
+	@Override
+	public void start() {
+		new Thread(() -> {
+			while (true) {
+				if (workStarted) {
+					Factory.getBuildService().buildSite();
+				}
+				try {
+					Thread.sleep(10000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}).start();
+	}
+
 	public static void main(String[] args) {
 		App app = new App();
+		Thread t = new Main();
+		t.start();
 		app.start();
+		t.interrupt();
 	}
 }
 
@@ -91,10 +112,10 @@ class DBConnection {
 
 	public void connect() {
 		String url = "jdbc:mysql://localhost:3306/site5?serverTimezone=UTC";
-//		String user = "sbsst";
-//		String password = "sbs123414";
-		String user = "root";
-		String password = "";
+		String user = "sbsst";
+		String password = "sbs123414";
+//		String user = "root";
+//		String password = "";
 		String driverName = "com.mysql.cj.jdbc.Driver";
 
 		try {
@@ -500,9 +521,28 @@ class App {
 		Factory.getSession().setLoginedMember(Factory.getMemberService().getMember(1));
 	}
 
-	public void start() {
+//	public static boolean workStarted;
+//	static {
+//		workStarted = false;
+//	}
+//	private static void startWork() {
+//		new Thread(()->{
+//			while(true) {
+//				if(workStarted) {
+//					Factory.getBuildService().buildSite();
+//					try {
+//						Thread.sleep(3000);
+//					}catch (InterruptedException e) {
+//						e.printStackTrace();
+//					}
+//				}
+//			}
+//		}).start();
+//	}
 
+	public void start() {
 		while (true) {
+//			startWork();
 			System.out.printf("명령어 : ");
 			String command = Factory.getScanner().nextLine().trim();
 
@@ -525,8 +565,12 @@ class App {
 			controllers.get(reqeust.getControllerName()).doAction(reqeust);
 		}
 
+		if (Main.workStarted == true) {
+			Main.workStarted = false;
+		}
 		Factory.getDBConnection().close();
 		Factory.getScanner().close();
+		return;
 	}
 }
 
@@ -690,7 +734,9 @@ class ArticleController extends Controller {
 
 		System.out.println("== 게시물 리스트 시작 ==");
 		for (Article article : articles) {
-			System.out.printf("%d, %s, %s\n", article.getId(), article.getRegDate(), article.getTitle());
+			if (article.getBoardId() == Factory.getSession().getCurrentBoard().getId()) {
+				System.out.printf("%d, %s, %s\n", article.getId(), article.getRegDate(), article.getTitle());
+			}
 		}
 		System.out.println("== 게시물 리스트 끝 ==");
 	}
@@ -722,17 +768,23 @@ class BuildController extends Controller {
 	@Override
 	void doAction(Request reqeust) {
 		if (reqeust.getActionName().equals("site")) {
-			actionSite(reqeust);
+			actionSite();
 		} else if (reqeust.getActionName().equals("startAutoSite")) {
-			actionStartAutoSite(reqeust);
+			actionStartAutoSite();
+		} else if (reqeust.getActionName().equals("stopAutoSite")) {
+			actionStopAutoSite();
 		}
 	}
 
-	private void actionStartAutoSite(Request reqeust) {
+	private void actionStopAutoSite() {
+		buildService.stopAutoSite();
+	}
+
+	private void actionStartAutoSite() {
 		buildService.startAutoSite();
 	}
 
-	private void actionSite(Request reqeust) {
+	private void actionSite() {
 		buildService.buildSite();
 	}
 }
@@ -801,30 +853,24 @@ class MemberController extends Controller {
 }
 
 // Service
-class BuildService{
+class BuildService {
 	ArticleService articleService;
 
 	BuildService() {
 		articleService = Factory.getArticleService();
 	}
 
-	public void startAutoSite() {
+	public void stopAutoSite() {
+		Main.workStarted = false;
 	}
 
-//	@Override
-//	public void run() {
-//		while(true) {
-//			buildSite();
-//			System.out.println("buildSite() 실행!");
-//			try {
-//				Thread.sleep(10000);
-//			}catch (InterruptedException e) {
-//				e.printStackTrace();
-//			}
-//		}
-//	}
-	
+	public void startAutoSite() {
+		Main.workStarted = true;
+	}
+
 	public void buildSite() {
+		//build site를 한 후, DB에서 데이터를 삭제하면, 해당 데이터의 html은 여전히 남아있다.
+//		Util.deleteDir("site");
 		Util.makeDir("site");
 		Util.makeDir("site/article");
 
@@ -841,8 +887,8 @@ class BuildService{
 
 			List<Article> articles = articleService.getArticlesByBoardCode(board.getCode());
 
-			System.out.println("board code : " + board.getCode());
-			System.out.println("articles size : " + articles.size());
+//			System.out.println("board code : " + board.getCode());
+//			System.out.println("articles size : " + articles.size());
 
 			String template = Util.getFileContents("site_template/article/list.html");
 
@@ -870,13 +916,13 @@ class BuildService{
 
 			html += "<div>제목 : " + article.getTitle() + "</div>";
 			html += "<div>내용 : " + article.getBody() + "</div>";
-			
-			//list라서 DB의 id와는 쌓이는 순서가 반대가 되어서 if문의 조건식이 이렇게 되어버렸음.
-			//중간에 삭제할 경우 이어지지 404 페이지가 생기니 html 파일이 존재하지 않을 경우 넘기는 방법 찾아내기.
-			if(article.getId()!=articles.get(articles.size()-1).getId()) {
+
+			// list라서 DB의 id와는 쌓이는 순서가 반대가 되어서 if문의 조건식이 이렇게 되어버렸음.
+			// 중간에 삭제할 경우 이어지지 404 페이지가 생기니 html 파일이 존재하지 않을 경우 넘기는 방법 찾아내기.
+			if (article.getId() != articles.get(articles.size() - 1).getId()) {
 				html += "<div><a href=\"" + (article.getId() - 1) + ".html\">이전글</a></div>";
 			}
-			if(article.getId()!=articles.get(0).getId()) {
+			if (article.getId() != articles.get(0).getId()) {
 				html += "<div><a href=\"" + (article.getId() + 1) + ".html\">다음글</a></div>";
 			}
 
@@ -1043,9 +1089,9 @@ class ArticleDao {
 		return boards;
 	}
 
-	public Board getBoardByCode(String code) {
-		return db.getBoardByCode(code);
-	}
+//	public Board getBoardByCode(String code) {
+//		return db.getBoardByCode(code);
+//	}
 
 	public int saveBoard(String name, String code) {
 		String sql = "";
@@ -1652,4 +1698,27 @@ class Util {
 			dir.mkdir();
 		}
 	}
+	
+//	실패ㅜ
+//	public static void deleteDir(String dirPath) {
+//		File folder = new File(dirPath);
+//		try {
+//		    while(folder.exists()) {
+//			File[] folder_list = folder.listFiles(); //파일리스트 얻어오기
+//					
+//			for (int j = 0; j < folder_list.length; j++) {
+//				folder_list[j].delete(); //파일 삭제 
+//				System.out.println("파일이 삭제되었습니다.");
+//						
+//			}
+//					
+//			if(folder_list.length == 0 && folder.isDirectory()){ 
+//				folder.delete(); //대상폴더 삭제
+//				System.out.println("폴더가 삭제되었습니다.");
+//			}
+//	            }
+//		 } catch (Exception e) {
+//			e.getStackTrace();
+//		}
+//	}
 }
