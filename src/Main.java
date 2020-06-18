@@ -430,6 +430,13 @@ class Factory {
 		}
 		return dbConnection;
 	}
+	
+	public static DB getDB() {
+		if (db == null) {
+			db = new DB();
+		}
+		return db;
+	}
 
 	public static Session getSession() {
 		if (session == null) {
@@ -443,13 +450,6 @@ class Factory {
 			scanner = new Scanner(System.in);
 		}
 		return scanner;
-	}
-
-	public static DB getDB() {
-		if (db == null) {
-			db = new DB();
-		}
-		return db;
 	}
 
 	public static ArticleService getArticleService() {
@@ -521,28 +521,8 @@ class App {
 		Factory.getSession().setLoginedMember(Factory.getMemberService().getMember(1));
 	}
 
-//	public static boolean workStarted;
-//	static {
-//		workStarted = false;
-//	}
-//	private static void startWork() {
-//		new Thread(()->{
-//			while(true) {
-//				if(workStarted) {
-//					Factory.getBuildService().buildSite();
-//					try {
-//						Thread.sleep(3000);
-//					}catch (InterruptedException e) {
-//						e.printStackTrace();
-//					}
-//				}
-//			}
-//		}).start();
-//	}
-
 	public void start() {
 		while (true) {
-//			startWork();
 			System.out.printf("명령어 : ");
 			String command = Factory.getScanner().nextLine().trim();
 
@@ -816,7 +796,7 @@ class MemberController extends Controller {
 		Member loginedMember = Factory.getSession().getLoginedMember();
 
 		if (loginedMember == null) {
-			System.out.println("나그네");
+			System.out.println("비회원");
 		} else {
 			System.out.println(loginedMember.getName());
 		}
@@ -887,12 +867,8 @@ class BuildService {
 
 			List<Article> articles = articleService.getArticlesByBoardCode(board.getCode());
 
-//			System.out.println("board code : " + board.getCode());
-//			System.out.println("articles size : " + articles.size());
-
 			String template = Util.getFileContents("site_template/article/list.html");
 
-			// 여기서 문제... 왜?
 			for (Article article : articles) {
 				html += "<tr>";
 				html += "<td>" + article.getId() + "</td>";
@@ -1021,7 +997,6 @@ class ArticleDao {
 	DBConnection dbConnection;
 
 	ArticleDao() {
-		db = Factory.getDB(); // 나중에 없어질
 		dbConnection = Factory.getDBConnection();
 	}
 
@@ -1076,7 +1051,6 @@ class ArticleDao {
 
 	public List<Article> getArticlesByBoardCode(String code) {
 		return dbConnection.getArticlesByBoardCode(code);
-//		return db.getArticlesByBoardCode(code);
 	}
 
 	public List<Board> getBoards() {
@@ -1088,10 +1062,6 @@ class ArticleDao {
 		}
 		return boards;
 	}
-
-//	public Board getBoardByCode(String code) {
-//		return db.getBoardByCode(code);
-//	}
 
 	public int saveBoard(String name, String code) {
 		String sql = "";
